@@ -92,6 +92,27 @@ const fixtures = [
     }
   ),
   authored(
+    'inserttype_between_cells',
+    'A coach note inserted BETWEEN two existing cells — the anchoring case insert_coach_note needs, which PushType cannot express at all.',
+    (doc) => {
+      const cells = doc.getArray('cells')
+      doc.transact(() => {
+        for (const text of ['first cell', 'third cell']) {
+          const cell = new Y.Map()
+          const src = new Y.Text()
+          src.insert(0, text)
+          cell.set('source', src)
+          cells.push([cell])
+        }
+        const note = new Y.Map()
+        const nsrc = new Y.Text()
+        nsrc.insert(0, 'coach note')
+        note.set('source', nsrc)
+        cells.insert(1, [note])
+      })
+    }
+  ),
+  authored(
     'pushtype_after_plain_values',
     'A nested map pushed after plain values — PushType anchors after the ContentAny item.',
     (doc) => {

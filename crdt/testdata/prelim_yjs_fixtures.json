@@ -22,6 +22,13 @@
       "expectedJSON": "{\"cells\":[{\"source\":\"first cell\"},{\"source\":\"second cell\"}]}"
     },
     {
+      "name": "inserttype_between_cells",
+      "description": "A coach note inserted BETWEEN two existing cells — the anchoring case insert_coach_note needs, which PushType cannot express at all.",
+      "clientID": 3735928559,
+      "updateV1": "0109effdb6f50d0007010563656c6c73012700effdb6f50d0006736f75726365020400effdb6f50d010a66697273742063656c6c87effdb6f50d00012700effdb6f50d0c06736f75726365020400effdb6f50d0d0a74686972642063656c6cc7effdb6f50d00effdb6f50d0c012700effdb6f50d1806736f75726365020400effdb6f50d190a636f616368206e6f746500",
+      "expectedJSON": "{\"cells\":[{\"source\":\"first cell\"},{\"source\":\"coach note\"},{\"source\":\"third cell\"}]}"
+    },
+    {
       "name": "pushtype_after_plain_values",
       "description": "A nested map pushed after plain values — PushType anchors after the ContentAny item.",
       "clientID": 3735928559,

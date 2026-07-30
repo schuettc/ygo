@@ -66,6 +66,28 @@ var prelimBuilders = map[string]func(*Doc){
 			root.PushType(txn, t)
 		})
 	},
+	// The shape insert_coach_note actually needs: a note placed BETWEEN two
+	// existing cells. PushType cannot express it, and the PushType+Move
+	// workaround emits ContentMove (an ygo extension) which corrupts the
+	// document for pycrdt/yjs consumers — so byte-identity here is the proof
+	// that InsertType uses the standard wire shape.
+	"inserttype_between_cells": func(doc *Doc) {
+		cells := doc.GetArray("cells")
+		doc.Transact(func(txn *Transaction) {
+			for _, text := range []string{"first cell", "third cell"} {
+				cell := NewMapPrelim()
+				src := NewTextPrelim()
+				src.Insert(txn, 0, text, nil)
+				cell.Set(txn, "source", src)
+				cells.PushType(txn, cell)
+			}
+			note := NewMapPrelim()
+			nsrc := NewTextPrelim()
+			nsrc.Insert(txn, 0, "coach note", nil)
+			note.Set(txn, "source", nsrc)
+			cells.InsertType(txn, 1, note)
+		})
+	},
 	"two_cells_pushed_in_sequence": func(doc *Doc) {
 		cells := doc.GetArray("cells")
 		doc.Transact(func(txn *Transaction) {
