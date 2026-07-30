@@ -104,3 +104,64 @@ func (a *YArray) PushType(txn *Transaction, st sharedType) {
 	// the owner — so buffered children materialise top-down from here.
 	item.integrate(txn, 0)
 }
+
+// InsertType inserts a DETACHED shared type at logical position index
+// (0 = prepend, Len() = append), as its own nested item.
+//
+// It is to Insert what PushType is to Push: Insert batches plain values into a
+// single ContentAny item, which a nested type cannot share. Without this, the
+// only way to place a nested type anywhere but the end is PushType followed by
+// Move — and Move emits ContentMove, a ygo extension no other Yjs
+// implementation decodes, so a peer such as pycrdt rejects the whole update.
+//
+// Placement mirrors Insert: leftNeighbourAt uses LIVE-index semantics (it skips
+// tombstones), splitting the neighbour when the index falls inside it. That is
+// the deliberate difference from PushType, which anchors after the last
+// PHYSICAL item so a concurrent Yjs push converges the same way.
+func (a *YArray) InsertType(txn *Transaction, index int, st sharedType) {
+	bt := st.baseType()
+	if !bt.detached() {
+		panic("crdt: InsertType requires a detached type (use NewMapPrelim/NewTextPrelim)")
+	}
+	if a.detached() {
+		a.pending = append(a.pending, func(txn *Transaction) { a.InsertType(txn, index, st) })
+		return
+	}
+	t := &a.abstractType
+
+	left, offset := t.leftNeighbourAt(index)
+	if offset > 0 {
+		splitItem(txn, left, offset)
+		// left now holds the [0,offset) part; its Right is the new right half.
+	}
+
+	var origin *ID
+	var originRight *ID
+	if left != nil {
+		end := left.ID.Clock + uint64(left.Content.Len()) - 1
+		origin = &ID{Client: left.ID.Client, Clock: end}
+		if left.Right != nil {
+			id := left.Right.ID
+			originRight = &id
+		}
+	} else if t.start != nil {
+		id := t.start.ID
+		originRight = &id
+	}
+
+	item := &Item{
+		ID:          ID{Client: txn.doc.clientID, Clock: txn.doc.store.NextClock(txn.doc.clientID)},
+		Origin:      origin,
+		OriginRight: originRight,
+		Left:        left,
+		Parent:      t,
+		Content:     NewContentType(bt),
+	}
+	// Signal the logical index for partial pos-cache invalidation, as Insert does.
+	if index > 0 {
+		t.insertHint = index
+	}
+	// item.integrate sets bt.item, assigns bt.doc, and calls flushPrelim on
+	// the owner — so buffered children materialise top-down from here.
+	item.integrate(txn, 0)
+}
